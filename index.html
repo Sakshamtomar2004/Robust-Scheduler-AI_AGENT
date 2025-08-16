@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Schedule Enforcer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .tasks-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-active { background: #f8d7da; color: #721c24; }
+        .status-completed { background: #d4edda; color: #155724; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #f0f8ff;
+        }
+
+        #currentTime {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Schedule Enforcer</h1>
+            <p>Manage your schedule with AI-powered verification</p>
+            <div id="currentTime"></div>
+        </header>
+
+        <div class="grid">
+            <!-- Left Column: Create Task -->
+            <div>
+                <div class="card">
+                    <h2>📅 Create New Task</h2>
+                    <form id="taskForm">
+                        <div class="form-group">
+                            <label for="taskName">Task Name:</label>
+                            <input type="text" id="taskName" required placeholder="e.g., Wake up, Exercise, Read book">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="startTime">Start Time (24-hour format):</label>
+                            <input type="time" id="startTime" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="taskDuration">Duration (minutes):</label>
+                            <input type="number" id="taskDuration" min="1" max="1440" required placeholder="30">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="alertGap">Alert Gap (minutes):</label>
+                            <input type="number" id="alertGap" min="1" max="60" required placeholder="10">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="instructions">Verification Instructions:</label>
+                            <textarea id="instructions" rows="3" required 
+                                placeholder="Describe what the verification photo should show (e.g., 'Upload a selfie with eyes open', 'Upload photo holding a book')"></textarea>
+                        </div>
+
+                        <button type="submit" id="createTaskBtn">Create Task</button>
+                    </form>
+                    <div id="taskStatus"></div>
+                </div>
+
+                <!-- System Status -->
+                <div class="card">
+                    <h2>📊 System Status</h2>
+                    <div id="systemStatus">
+                        <button onclick="refreshStatus()">Refresh Status</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Tasks List and Verification -->
+            <div>
+                <div class="card">
+                    <h2>📋 Your Tasks</h2>
+                    <div id="tasksList">
+                        <button onclick="loadTasks()">Load Tasks</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>📸 Task Verification</h2>
+                    <form id="verificationForm">
+                        <div class="form-group">
+                            <label for="taskSelect">Select Task to Verify:</label>
+                            <select id="taskSelect" required>
+                                <option value="">Choose a task...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Upload Verification Photo:</label>
+                            <div class="file-upload" id="fileUpload">
+                                <input type="file" id="imageFile" accept="image/*" required style="display: none;">
+                                <p>📷 Click to select image or drag & drop</p>
+                                <p><small>Supported: JPG, PNG, GIF</small></p>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="verifyBtn">Verify Task</button>
+                    </form>
+                    <div id="verificationResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+
+        // Update current time
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('currentTime').textContent = `Current Time: ${timeString}`;
+        }
+
+        setInterval(updateCurrentTime, 1000);
+        updateCurrentTime();
+
+        // Create task form handler
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('createTaskBtn');
+            const status = document.getElementById('taskStatus');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Creating...';
+
+            const taskData = {
+                task_name: document.getElementById('taskName').value,
+                start_time: document.getElementById('startTime').value,
+                task_duration: parseInt(document.getElementById('taskDuration').value),
+                alert_gap: parseInt(document.getElementById('alertGap').value),
+                verification_instructions: document.getElementById('instructions').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/schedule`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    status.innerHTML = `<div class="status success">✅ Task created successfully! ID: ${result.id}</div>`;
+                    document.getElementById('taskForm').reset();
+                    loadTasks(); // Refresh task list
+                } else {
+                    const error = await response.json();
+                    status.innerHTML = `<div class="status error">❌ Error: ${error.detail}</div>`;
+                }
+            } catch (error) {
+                status.innerHTML = `<div class="status error">❌ Network error: ${error.message}</div>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Create Task';
+        });
+
+        // Load tasks
+        async function loadTasks() {
+            const tasksList = document.getElementById('tasksList');
+            const taskSelect = document.getElementById('taskSelect');
+
+            tasksList.innerHTML = '<div class="loading"></div> Loading tasks...';
+
+            try {
+                const response = await fetch(`${API_BASE}/schedule`);
+                if (response.ok) {
+                    const tasks = await response.json();
+
+                    if (tasks.length === 0) {
+                        tasksList.innerHTML = '<p>No tasks created yet.</p>';
+                        taskSelect.innerHTML = '<option value="">No tasks available</option>';
+                        return;
+                    }
+
+                    // Display tasks
+                    let tasksHtml = '';
+                    let selectOptions = '<option value="">Choose a task...</option>';
+
+                    tasks.forEach(task => {
+                        tasksHtml += `
+                            <div class="task-item">
+                                <h4>${task.task_name}</h4>
+                                <p><strong>Time:</strong> ${task.start_time} (${task.task_duration} min)</p>
+                                <p><strong>Instructions:</strong> ${task.verification_instructions}</p>
+                                <p><strong>Status:</strong> <span class="task-status status-${task.status}">${task.status.toUpperCase()}</span></p>
+                                <p><small>Created: ${new Date(task.created_at).toLocaleString()}</small></p>
+                            </div>
+                        `;
+
+                        if (task.status === 'active' || task.status === 'pending') {
+                            selectOptions += `<option value="${task.id}">${task.task_name} (${task.start_time})</option>`;
+                        }
+                    });
+
+                    tasksList.innerHTML = tasksHtml;
+                    taskSelect.innerHTML = selectOptions;
+
+                } else {
+                    tasksList.innerHTML = '<div class="status error">❌ Failed to load tasks</div>';
+                }
+            } catch (error) {
+                tasksList.innerHTML = `<div class="status error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        // File upload handling
+        const fileUpload = document.getElementById('fileUpload');
+        const imageFile = document.getElementById('imageFile');
+
+        fileUpload.addEventListener('click', () => imageFile.click());
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            imageFile.files = e.dataTransfer.files;
+            updateFileDisplay();
+        });
+
+        imageFile.addEventListener('change', updateFileDisplay);
+
+        function updateFileDisplay() {
+            const file = imageFile.files[0];
+            if (file) {
+                fileUpload.innerHTML = `
+                    <p>✅ Selected: ${file.name}</p>
+                    <p><small>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</small></p>
+                `;
+            }
+        }
+
+        // Verification form handler
+        document.getElementById('verificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('verifyBtn');
+            const result = document.getElementById('verificationResult');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Verifying...';
+
+            const taskId = document.getElementById('taskSelect').value;
+            const imageFile = document.getElementById('imageFile').files[0];
+
+            if (!taskId || !imageFile) {
+                result.innerHTML = '<div class="status error">❌ Please select a task and upload an image</div>';
+                btn.disabled = false;
+                btn.textContent = 'Verify Task';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('task_id', taskId);
+            formData.append('image', imageFile);
+
+            try {
+                const response = await fetch(`${API_BASE}/verify`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const verification = await response.json();
+
+                    const statusClass = verification.success ? 'success' : 'error';
+                    const statusIcon = verification.success ? '✅' : '❌';
+
+                    result.innerHTML = `
+                        <div class="status ${statusClass}">
+                            <h3>${statusIcon} Verification ${verification.success ? 'Successful' : 'Failed'}</h3>
+                            <p><strong>Reasoning:</strong> ${verification.reasoning}</p>
+                            <p><strong>Confidence:</strong> ${(verification.confidence * 100).toFixed(1)}%</p>
+                            <p><small>Time: ${new Date(verification.timestamp).toLocaleString()}</small></p>
+                        </div>
+                    `;
+
+                    // Clear form if successful
+                    if (verification.success) {
+                        document.getElementById('verificationForm').reset();
+                        fileUpload.innerHTML = `
+                            <p>📷 Click to select image or drag & drop</p>
+                            <p><small>Supported: JPG, PNG, GIF</small></p>
+                        `;
+                    }
+
+                    loadTasks(); // Refresh task list
+
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `<div class="status error">❌ Error: ${error.detail}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="status error">❌ Network error: ${error.message}</div>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Verify Task';
+        });
+
+        // System status
+        async function refreshStatus() {
+            const statusDiv = document.getElementById('systemStatus');
+            statusDiv.innerHTML = '<div class="loading"></div> Loading status...';
+
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                if (response.ok) {
+                    const status = await response.json();
+                    statusDiv.innerHTML = `
+                        <div class="status info">
+                            <p><strong>Current Time:</strong> ${status.current_time}</p>
+                            <p><strong>Total Tasks:</strong> ${status.total_tasks}</p>
+                            <p><strong>Active Tasks:</strong> ${status.active_tasks}</p>
+                            <p><strong>Completed Tasks:</strong> ${status.completed_tasks}</p>
+                            <p><strong>Pending Tasks:</strong> ${status.pending_tasks}</p>
+                            <p><strong>Active Alarms:</strong> ${status.active_alarms}</p>
+                            <p><strong>Groq API:</strong> ${status.groq_configured ? '✅ Configured' : '❌ Not configured'}</p>
+                        </div>
+                        <button onclick="refreshStatus()">Refresh Status</button>
+                    `;
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ Failed to load status</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            loadTasks();
+            refreshStatus();
+        });
+    </script>
+</body>
+</html>

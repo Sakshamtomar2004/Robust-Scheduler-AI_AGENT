@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Schedule Enforcer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Alert Banner -->
+        <div id="alert-banner" class="alert-banner hidden">
+            <div class="container">
+                <div class="alert-content">
+                    <div class="alert-text">
+                        <strong>⚠️ Task Alert</strong>
+                        <span id="alert-message">Task notification message</span>
+                    </div>
+                    <button id="dismiss-alert" class="btn btn--sm btn--outline">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="app-header">
+            <div class="container">
+                <div class="header-content">
+                    <h1>
+                        <i class="fas fa-robot"></i>
+                        AI Schedule Enforcer
+                    </h1>
+                    <div class="system-status">
+                        <div class="status-item">
+                            <i class="fas fa-clock"></i>
+                            <span id="current-time">Loading...</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-wifi" id="api-indicator"></i>
+                            <span id="api-status" class="status">Connecting...</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-bell" id="alarm-indicator"></i>
+                            <span id="alarm-status">Silent</span>
+                            <button id="stop-alarm" class="btn btn--sm btn--danger hidden">
+                                <i class="fas fa-stop"></i> Stop Alarm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Dashboard Section -->
+                <section class="dashboard-section">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-tachometer-alt"></i>
+                            Dashboard
+                        </h2>
+                        <div class="header-controls">
+                            <button id="refresh-tasks" class="btn btn--outline btn--sm">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="dashboard-icon pending">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="dashboard-content">
+                                <h3 id="pending-count">0</h3>
+                                <p>Pending Tasks</p>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="dashboard-icon active">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                            <div class="dashboard-content">
+                                <h3 id="active-count">0</h3>
+                                <p>Active Tasks</p>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="dashboard-icon completed">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="dashboard-content">
+                                <h3 id="completed-count">0</h3>
+                                <p>Completed Today</p>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="dashboard-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="dashboard-content">
+                                <h3 id="total-count">0</h3>
+                                <p>Total Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Task Creation Form -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-plus-circle"></i>
+                            Add New Task
+                        </h2>
+                    </div>
+                    <div class="card">
+                        <div class="card__body">
+                            <form id="task-form" class="task-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="task-name" class="form-label">Task Name</label>
+                                        <input type="text" id="task-name" class="form-control" 
+                                               placeholder="e.g., Morning Exercise" required maxlength="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="start-time" class="form-label">Start Time</label>
+                                        <input type="time" id="start-time" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="task-duration" class="form-label">Duration (minutes)</label>
+                                        <input type="number" id="task-duration" class="form-control" 
+                                               placeholder="30" min="1" max="1440" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="alert-gap" class="form-label">Alert Gap (minutes)</label>
+                                        <input type="number" id="alert-gap" class="form-control" 
+                                               placeholder="5" min="1" max="60" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="verification-instructions" class="form-label">Verification Instructions</label>
+                                    <textarea id="verification-instructions" class="form-control" 
+                                              placeholder="Describe what the AI should look for in verification photos..."
+                                              rows="3" minlength="10" maxlength="500" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn--primary btn--full-width">
+                                    <i class="fas fa-plus"></i> Add Task
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tasks Display -->
+                <section class="tasks-section">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-list-check"></i>
+                            Your Tasks
+                        </h2>
+                    </div>
+                    <div id="tasks-container" class="tasks-grid">
+                        <div class="loading-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading tasks...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Groq Response Section -->
+                <section id="groq-section" class="groq-section hidden">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-brain"></i>
+                            Latest AI Verification
+                        </h2>
+                        <div class="header-controls">
+                            <button id="clear-groq" class="btn btn--outline btn--sm">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__body">
+                            <div id="groq-response" class="groq-response">
+                                No verification results yet.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Camera Modal -->
+        <div id="camera-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-camera"></i>
+                        Task Verification
+                    </h3>
+                    <button id="close-camera" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="camera-container">
+                        <video id="camera-video" autoplay playsinline muted></video>
+                        <div class="photo-preview hidden">
+                            <img id="captured-photo" alt="Captured photo">
+                        </div>
+                    </div>
+                    <div class="camera-controls">
+                        <div class="camera-actions">
+                            <button id="capture-photo" class="btn btn--primary btn--lg">
+                                <i class="fas fa-camera"></i> Capture Photo
+                            </button>
+                            <button id="switch-camera" class="btn btn--outline">
+                                <i class="fas fa-sync-alt"></i> Switch Camera
+                            </button>
+                        </div>
+                        <div class="photo-actions hidden">
+                            <button id="upload-photo" class="btn btn--primary btn--lg">
+                                <i class="fas fa-upload"></i> Upload & Verify
+                            </button>
+                            <button id="retake-photo" class="btn btn--outline">
+                                <i class="fas fa-redo"></i> Retake Photo
+                            </button>
+                        </div>
+                        <!-- File Upload Fallback -->
+                        <div class="file-upload-fallback" style="display: none;">
+                            <p>Camera not available? Upload a photo instead:</p>
+                            <input type="file" id="file-upload" accept="image/*" class="form-control">
+                            <small>Supported formats: JPG, PNG, WebP (Max 10MB)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verification Result Modal -->
+        <div id="verification-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-check-circle"></i>
+                        Verification Result
+                    </h3>
+                    <button id="close-verification" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="verification-content" class="verification-content">
+                        <!-- Dynamic content will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="loading-content">
+                <i class="fas fa-spinner fa-spin"></i>
+                <h3>Processing...</h3>
+                <p>Please wait while we process your request.</p>
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
